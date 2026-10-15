@@ -11,12 +11,7 @@ from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
 from handlers.start_handler import start_router
 from handlers.hashtag_wizard import wizard_router
-from main import setup_bot_profile
 
-bot = Bot(
-    token=BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
 dp = Dispatcher()
 dp.include_router(start_router)
 dp.include_router(wizard_router)
@@ -29,17 +24,19 @@ class handler(BaseHTTPRequestHandler):
         proto = self.headers.get("X-Forwarded-Proto", "https")
         webhook_url = f"{proto}://{host}/"
 
-        # Webhook holatini olish
         async def check():
-            await setup_bot_profile(bot)
-            return await bot.get_webhook_info()
+            async with Bot(
+                token=BOT_TOKEN,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+            ) as bot_instance:
+                return await bot_instance.get_webhook_info()
 
         try:
             info = asyncio.run(check())
-            status = f"✅ Faol (Uzluksiz ishlamoqda)"
+            status = "Faol va ulangan (24/7 Serverless) ✅"
             tg_url = info.url or webhook_url
         except Exception as e:
-            status = f"Ogohlantirish: {e}"
+            status = f"Holat: {e}"
             tg_url = webhook_url
 
         self.send_response(200)
@@ -61,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
                     <p style="margin: 6px 0;"><b>Bot:</b> @instarek_uz_bot</p>
                     <p style="margin: 6px 0;"><b>Status:</b> <span style="color: #4ade80;">{status}</span></p>
                     <p style="margin: 6px 0;"><b>Webhook:</b> <code style="color: #94a3b8; font-size: 12px;">{tg_url}</code></p>
-                    <p style="margin: 6px 0;"><b>Hosting:</b> Vercel 24/7</p>
+                    <p style="margin: 6px 0;"><b>Hosting:</b> Vercel 24/7 Cloud</p>
                 </div>
                 <a href="https://t.me/instarek_uz_bot" style="display: block; padding: 14px; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px;">
                     🤖 Telegramda Botni Ochish
@@ -81,8 +78,12 @@ class handler(BaseHTTPRequestHandler):
                 update_dict = json.loads(post_data.decode('utf-8'))
 
                 async def process():
-                    update = Update.model_validate(update_dict, context={"bot": bot})
-                    await dp.feed_update(bot=bot, update=update)
+                    async with Bot(
+                        token=BOT_TOKEN,
+                        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+                    ) as bot_instance:
+                        update = Update.model_validate(update_dict, context={"bot": bot_instance})
+                        await dp.feed_update(bot=bot_instance, update=update)
 
                 asyncio.run(process())
 
