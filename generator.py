@@ -167,6 +167,9 @@ def generate_hashtags(
             seen.add(extra_tag)
             all_selected.append(extra_tag)
 
+    # Tartibni aralashtirib har bir foydalanuvchiga unikal qilish
+    random.shuffle(all_selected)
+
     # Formatlash
     hashtags_list = [f"#{tag}" for tag in all_selected]
     hashtags_string = " ".join(hashtags_list)

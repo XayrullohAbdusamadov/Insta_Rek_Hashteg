@@ -6,6 +6,8 @@ from aiogram.fsm.context import FSMContext
 from config import ABOUT_TEXT, CREATOR_NAME, BOT_NAME
 from keyboards.inline_keyboards import get_main_menu_keyboard, get_back_to_menu_keyboard
 
+from aiogram.exceptions import TelegramBadRequest
+
 start_router = Router()
 
 REK_SECRETS_TEXT = f"""🔥 <b>Instagram Reels Rekka Chiqish Sirlari (2026 Algoritmi):</b>
@@ -70,20 +72,27 @@ async def cmd_tips(message: Message):
 @start_router.callback_query(F.data == "about_bot")
 async def cb_about_bot(callback: CallbackQuery):
     """Bot haqida callback"""
-    await callback.message.edit_text(ABOUT_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
     await callback.answer()
+    try:
+        await callback.message.edit_text(ABOUT_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
+    except TelegramBadRequest:
+        pass
 
 
 @start_router.callback_query(F.data == "rek_tips")
 async def cb_rek_tips(callback: CallbackQuery):
     """Rekka chiqish sirlari callback"""
-    await callback.message.edit_text(REK_SECRETS_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
     await callback.answer()
+    try:
+        await callback.message.edit_text(REK_SECRETS_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
+    except TelegramBadRequest:
+        pass
 
 
 @start_router.callback_query(F.data == "main_menu")
 async def cb_main_menu(callback: CallbackQuery, state: FSMContext):
     """Bosh menyuga qaytish callback"""
+    await callback.answer()
     await state.clear()
     welcome_text = f"""🏠 <b>Asosiy Menyu</b>
 
@@ -91,5 +100,7 @@ Instagramda videolaringiz ko'proq ko'rishlar (views) va yangi obunachilar yig'is
 
 👤 <b>Yaratuvchi:</b> {CREATOR_NAME}
 """
-    await callback.message.edit_text(welcome_text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
-    await callback.answer()
+    try:
+        await callback.message.edit_text(welcome_text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+    except TelegramBadRequest:
+        pass

@@ -104,15 +104,15 @@ def get_post_type_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_result_keyboard(session_id: str = "") -> InlineKeyboardMarkup:
+def get_result_keyboard() -> InlineKeyboardMarkup:
     """Natija sahifasidagi tugmalar"""
     buttons = [
         [
             InlineKeyboardButton(text="🔄 Boshqa variant olish", callback_data="regenerate_tags"),
-            InlineKeyboardButton(text="🚀 Yangi heshteg", callback_data="start_wizard")
+            InlineKeyboardButton(text="⚙️ Almashtirish / Sozlash", callback_data="back_to_size")
         ],
         [
-            InlineKeyboardButton(text="💡 Rekka chiqish sirlari", callback_data="rek_tips"),
+            InlineKeyboardButton(text="🚀 Yangi mavzu", callback_data="start_wizard"),
             InlineKeyboardButton(text="🏠 Bosh menyu", callback_data="main_menu")
         ]
     ]
