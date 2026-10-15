@@ -2,11 +2,15 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
 
 from config import ABOUT_TEXT, CREATOR_NAME, BOT_NAME
-from keyboards.inline_keyboards import get_main_menu_keyboard, get_back_to_menu_keyboard
-
-from aiogram.exceptions import TelegramBadRequest
+from keyboards.inline_keyboards import (
+    get_main_menu_keyboard,
+    get_back_to_menu_keyboard,
+    get_categories_keyboard
+)
+from keyboards.reply_keyboards import get_main_reply_keyboard
 
 start_router = Router()
 
@@ -32,8 +36,9 @@ Instagram sozlamalarida <i>"Eng yuqori sifatda yuklash" (Upload at highest quali
 
 
 @start_router.message(CommandStart())
+@start_router.message(F.text == "🏠 Bosh menyu")
 async def cmd_start(message: Message, state: FSMContext):
-    """Start buyrug'i"""
+    """Start buyrug'i va pastki Bosh menyu tugmasi"""
     await state.clear()
     
     user_name = message.from_user.first_name if message.from_user else "Foydalanuvchi"
@@ -52,26 +57,43 @@ Instagram Reels va postlaringizni <b>rekka (tavsiyalar lentasiga)</b> olib chiqi
 
 👤 <b>Yaratuvchi:</b> {CREATOR_NAME}
 
-Boshlash uchun quyidagi tugmani bosing:
+Boshlash uchun quyidagi tugmalardan birini tanlang:
 """
-    await message.answer(welcome_text, reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+    # 1. Pastki doimiy reply tugmalarni ko'rsatish
+    await message.answer(welcome_text, reply_markup=get_main_reply_keyboard(), parse_mode="HTML")
+    # 2. Asosiy inline boshqaruv tugmalarini chiqarish
+    await message.answer("🚀 <b>Kerakli bo'limni tanlang:</b>", reply_markup=get_main_menu_keyboard(), parse_mode="HTML")
+
+
+@start_router.message(Command("hashtag"))
+@start_router.message(F.text == "🚀 Heshteg yaratish")
+async def cmd_hashtag(message: Message, state: FSMContext):
+    """Heshteg yaratish buyrug'i va tugmasi"""
+    await state.clear()
+    text = """🎯 <b>1-Qadam: Videongiz nima haqida?</b>
+
+Quyidagi mashhur toifalardan birini tanlang yoki o'zingiz istalgan mavzuni yozib yuboring (Masalan: <i>"novvoyxona ochish", "iphone 16 obzor", "qishloq hayoti"</i>):
+"""
+    await message.answer(text, reply_markup=get_categories_keyboard(), parse_mode="HTML")
 
 
 @start_router.message(Command("about"))
+@start_router.message(F.text == "ℹ️ Bot haqida")
 async def cmd_about(message: Message):
-    """About buyrug'i"""
+    """About buyrug'i va tugmasi"""
     await message.answer(ABOUT_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
 
 
 @start_router.message(Command("tips"))
+@start_router.message(F.text == "💡 Rekka chiqish sirlari")
 async def cmd_tips(message: Message):
-    """Rekka chiqish sirlari buyrug'i"""
+    """Rekka chiqish sirlari buyrug'i va tugmasi"""
     await message.answer(REK_SECRETS_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
 
 
 @start_router.callback_query(F.data == "about_bot")
 async def cb_about_bot(callback: CallbackQuery):
-    """Bot haqida callback"""
+    """Bot haqida inline callback"""
     await callback.answer()
     try:
         await callback.message.edit_text(ABOUT_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
@@ -81,7 +103,7 @@ async def cb_about_bot(callback: CallbackQuery):
 
 @start_router.callback_query(F.data == "rek_tips")
 async def cb_rek_tips(callback: CallbackQuery):
-    """Rekka chiqish sirlari callback"""
+    """Rekka chiqish sirlari inline callback"""
     await callback.answer()
     try:
         await callback.message.edit_text(REK_SECRETS_TEXT, reply_markup=get_back_to_menu_keyboard(), parse_mode="HTML")
