@@ -44,25 +44,25 @@ def get_categories_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def get_size_keyboard() -> InlineKeyboardMarkup:
-    """Heshteglar soni / kattaligi tugmalari"""
+def get_size_keyboard(cat_id: str = "custom") -> InlineKeyboardMarkup:
+    """Heshteglar soni / kattaligi tugmalari (Stateless)"""
     buttons = [
         [
             InlineKeyboardButton(
                 text="🟢 Kichik (5-8 ta) — Minimalist & Algoritm SEO",
-                callback_data="size_small"
+                callback_data=f"sz_{cat_id}_small"
             )
         ],
         [
             InlineKeyboardButton(
                 text="🟡 O'rta (15-18 ta) — Rek / Balans ⭐",
-                callback_data="size_medium"
+                callback_data=f"sz_{cat_id}_medium"
             )
         ],
         [
             InlineKeyboardButton(
                 text="🔴 Katta (25-30 ta) — Maksimal qamrov",
-                callback_data="size_large"
+                callback_data=f"sz_{cat_id}_large"
             )
         ],
         [
@@ -72,44 +72,44 @@ def get_size_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_language_keyboard() -> InlineKeyboardMarkup:
-    """Auditoriya tili tugmalari"""
+def get_language_keyboard(cat_id: str = "custom", size: str = "medium") -> InlineKeyboardMarkup:
+    """Auditoriya tili tugmalari (Stateless)"""
     buttons = [
         [
-            InlineKeyboardButton(text="🇺🇿 O'zbekcha (Mahalliy rek)", callback_data="lang_uz"),
-            InlineKeyboardButton(text="🇷🇺 Ruscha (MDH auditoriyasi)", callback_data="lang_ru")
+            InlineKeyboardButton(text="🇺🇿 O'zbekcha (Mahalliy rek)", callback_data=f"ln_{cat_id}_{size}_uz"),
+            InlineKeyboardButton(text="🇷🇺 Ruscha (MDH auditoriyasi)", callback_data=f"ln_{cat_id}_{size}_ru")
         ],
         [
-            InlineKeyboardButton(text="🇬🇧 Inglizcha (Global rek)", callback_data="lang_en"),
-            InlineKeyboardButton(text="🌐 Universal / Aralash ⭐", callback_data="lang_mix")
+            InlineKeyboardButton(text="🇬🇧 Inglizcha (Global rek)", callback_data=f"ln_{cat_id}_{size}_en"),
+            InlineKeyboardButton(text="🌐 Universal / Aralash ⭐", callback_data=f"ln_{cat_id}_{size}_mix")
         ],
         [
-            InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_size")
+            InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"cat_{cat_id}")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_post_type_keyboard() -> InlineKeyboardMarkup:
-    """Format turi (Reels yoki Post)"""
+def get_post_type_keyboard(cat_id: str = "custom", size: str = "medium", lang: str = "mix") -> InlineKeyboardMarkup:
+    """Format turi Reels/Post (Stateless)"""
     buttons = [
         [
-            InlineKeyboardButton(text="🎬 Reels / Qisqa video (Rek uchun)", callback_data="type_reels"),
-            InlineKeyboardButton(text="📸 Post / Karusel", callback_data="type_post")
+            InlineKeyboardButton(text="🎬 Reels / Qisqa video (Rek uchun)", callback_data=f"tp_{cat_id}_{size}_{lang}_reels"),
+            InlineKeyboardButton(text="📸 Post / Karusel", callback_data=f"tp_{cat_id}_{size}_{lang}_post")
         ],
         [
-            InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_lang")
+            InlineKeyboardButton(text="⬅️ Orqaga", callback_data=f"sz_{cat_id}_{size}")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_result_keyboard() -> InlineKeyboardMarkup:
-    """Natija sahifasidagi tugmalar"""
+def get_result_keyboard(cat_id: str = "custom", size: str = "medium", lang: str = "mix", post_type: str = "reels") -> InlineKeyboardMarkup:
+    """Natija sahifasidagi tugmalar (Stateless)"""
     buttons = [
         [
-            InlineKeyboardButton(text="🔄 Boshqa variant olish", callback_data="regenerate_tags"),
-            InlineKeyboardButton(text="⚙️ Almashtirish / Sozlash", callback_data="back_to_size")
+            InlineKeyboardButton(text="🔄 Boshqa variant olish", callback_data=f"rg_{cat_id}_{size}_{lang}_{post_type}"),
+            InlineKeyboardButton(text="⚙️ Almashtirish / Sozlash", callback_data=f"sz_{cat_id}_{size}")
         ],
         [
             InlineKeyboardButton(text="🚀 Yangi mavzu", callback_data="start_wizard"),

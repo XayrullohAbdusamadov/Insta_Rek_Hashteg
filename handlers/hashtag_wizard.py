@@ -1,4 +1,9 @@
+import os
+import json
 import html
+import random
+from pathlib import Path
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -18,6 +23,32 @@ from database.hashtags_data import CATEGORIES
 from config import CREATOR_NAME
 
 wizard_router = Router()
+
+# Serverless (Vercel) va mahalliy xotira uchun kesh fayli
+CUSTOM_STORAGE_FILE = Path("/tmp/user_custom_topics.json") if os.path.exists("/tmp") else Path("user_custom_topics.json")
+
+
+def save_user_custom_topic(user_id: int, query: str) -> None:
+    """Foydalanuvchi yozgan maxsus mavzuni saqlash"""
+    try:
+        data = {}
+        if CUSTOM_STORAGE_FILE.exists():
+            data = json.loads(CUSTOM_STORAGE_FILE.read_text(encoding="utf-8"))
+        data[str(user_id)] = query
+        CUSTOM_STORAGE_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def get_user_custom_topic(user_id: int) -> str:
+    """Foydalanuvchi yozgan maxsus mavzuni o'qish"""
+    try:
+        if CUSTOM_STORAGE_FILE.exists():
+            data = json.loads(CUSTOM_STORAGE_FILE.read_text(encoding="utf-8"))
+            return data.get(str(user_id), "")
+    except Exception:
+        pass
+    return ""
 
 
 # 1-QADAM: Wizardni boshlash (Toifa / Mavzu tanlash)
@@ -52,7 +83,7 @@ async def category_selected(callback: CallbackQuery, state: FSMContext):
 Instagram algoritmi bo'yicha o'zingizga ma'qul hajmni tanlang:
 """
     try:
-        await callback.message.edit_text(text, reply_markup=get_size_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(text, reply_markup=get_size_keyboard(cat_id=cat_id), parse_mode="HTML")
     except TelegramBadRequest:
         pass
 
@@ -82,6 +113,7 @@ async def custom_topic_received(message: Message, state: FSMContext):
         return
 
     safe_query = html.escape(user_query)
+    save_user_custom_topic(message.from_user.id, user_query)
     await state.update_data(category_id="custom", custom_query=user_query, category_title=f"🎯 {safe_query}")
     await state.set_state(HashtagWizard.waiting_for_size)
 
@@ -91,15 +123,18 @@ async def custom_topic_received(message: Message, state: FSMContext):
 
 Instagram algoritmi bo'yicha o'zingizga ma'qul hajmni tanlang:
 """
-    await message.answer(text, reply_markup=get_size_keyboard(), parse_mode="HTML")
+    await message.answer(text, reply_markup=get_size_keyboard(cat_id="custom"), parse_mode="HTML")
 
 
-# 2-QADAM: Kattalik (Hajm) tanlanganda
-@wizard_router.callback_query(F.data.startswith("size_"))
+# 2-QADAM: Kattalik (Hajm) tanlanganda (Stateless: sz_{cat_id}_{size})
+@wizard_router.callback_query(F.data.startswith("sz_"))
 async def size_selected(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    size = callback.data.replace("size_", "")
-    await state.update_data(size=size)
+    parts = callback.data.split("_")
+    cat_id = parts[1] if len(parts) > 1 else "biznes"
+    size = parts[2] if len(parts) > 2 else "medium"
+
+    await state.update_data(category_id=cat_id, size=size)
     await state.set_state(HashtagWizard.waiting_for_lang)
 
     size_names = {
@@ -115,32 +150,21 @@ async def size_selected(callback: CallbackQuery, state: FSMContext):
 Videongiz qaysi hudud yoki tildagi foydalanuvchilarning tavsiyasiga (rek) chiqishi kerak?
 """
     try:
-        await callback.message.edit_text(text, reply_markup=get_language_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(text, reply_markup=get_language_keyboard(cat_id=cat_id, size=size), parse_mode="HTML")
     except TelegramBadRequest:
         pass
 
 
-# Orqaga: Kattalikni tanlashga qaytish
-@wizard_router.callback_query(F.data == "back_to_size")
-async def back_to_size_step(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.set_state(HashtagWizard.waiting_for_size)
-    text = """📏 <b>2-Qadam: Heshteglar qanday kattalikda bo'lsin?</b>
-
-Quyidagi variantlardan birini tanlang:
-"""
-    try:
-        await callback.message.edit_text(text, reply_markup=get_size_keyboard(), parse_mode="HTML")
-    except TelegramBadRequest:
-        pass
-
-
-# 3-QADAM: Til tanlanganda
-@wizard_router.callback_query(F.data.startswith("lang_"))
+# 3-QADAM: Til tanlanganda (Stateless: ln_{cat_id}_{size}_{lang})
+@wizard_router.callback_query(F.data.startswith("ln_"))
 async def lang_selected(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    lang = callback.data.replace("lang_", "")
-    await state.update_data(lang=lang)
+    parts = callback.data.split("_")
+    cat_id = parts[1] if len(parts) > 1 else "biznes"
+    size = parts[2] if len(parts) > 2 else "medium"
+    lang = parts[3] if len(parts) > 3 else "mix"
+
+    await state.update_data(category_id=cat_id, size=size, lang=lang)
     await state.set_state(HashtagWizard.waiting_for_type)
 
     lang_names = {
@@ -157,43 +181,26 @@ async def lang_selected(callback: CallbackQuery, state: FSMContext):
 Reels yoki oddiy post (karusel) uchun moslashtiramiz:
 """
     try:
-        await callback.message.edit_text(text, reply_markup=get_post_type_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(text, reply_markup=get_post_type_keyboard(cat_id=cat_id, size=size, lang=lang), parse_mode="HTML")
     except TelegramBadRequest:
         pass
 
 
-# Orqaga: Til tanlashga qaytish
-@wizard_router.callback_query(F.data == "back_to_lang")
-async def back_to_lang_step(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.set_state(HashtagWizard.waiting_for_lang)
-    text = """🌐 <b>3-Qadam: Auditoriya va tili qanday bo'lsin?</b>
-
-Quyidagi variantlardan birini tanlang:
-"""
-    try:
-        await callback.message.edit_text(text, reply_markup=get_language_keyboard(), parse_mode="HTML")
-    except TelegramBadRequest:
-        pass
-
-
-# 4-QADAM: Format tanlanganda va GENERATSIYA
-@wizard_router.callback_query(F.data.startswith("type_"))
+# 4-QADAM: Format tanlanganda va GENERATSIYA (Stateless: tp_{cat_id}_{size}_{lang}_{post_type})
+@wizard_router.callback_query(F.data.startswith("tp_"))
 async def type_selected_and_generate(callback: CallbackQuery, state: FSMContext):
     await callback.answer("⏳ Heshteglar tayyorlanmoqda...")
-    post_type = callback.data.replace("type_", "")
-    await state.update_data(post_type=post_type, variant_num=1)
-    
-    data = await state.get_data()
-    
-    category_id = data.get("category_id", "custom")
-    custom_query = data.get("custom_query", "")
-    size = data.get("size", "medium")
-    lang = data.get("lang", "mix")
+    parts = callback.data.split("_")
+    cat_id = parts[1] if len(parts) > 1 else "biznes"
+    size = parts[2] if len(parts) > 2 else "medium"
+    lang = parts[3] if len(parts) > 3 else "mix"
+    post_type = parts[4] if len(parts) > 4 else "reels"
+
+    custom_query = get_user_custom_topic(callback.from_user.id) if cat_id == "custom" else ""
 
     # Heshteglarni generatsiya qilish
     res = generate_hashtags(
-        category_id=category_id,
+        category_id=cat_id,
         custom_query=custom_query,
         size=size,
         lang=lang,
@@ -223,28 +230,29 @@ Videoni eng qizg'in vaqtlarda (18:00 - 21:00) yuklash tavsiya etiladi!
 👤 <b>Yaratuvchi:</b> {CREATOR_NAME}
 """
     try:
-        await callback.message.edit_text(result_text, reply_markup=get_result_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(
+            result_text,
+            reply_markup=get_result_keyboard(cat_id=cat_id, size=size, lang=lang, post_type=post_type),
+            parse_mode="HTML"
+        )
     except TelegramBadRequest:
         pass
 
 
-# Qayta generatsiya qilish (Boshqa variant olish)
-@wizard_router.callback_query(F.data == "regenerate_tags")
+# Qayta generatsiya qilish (Boshqa variant olish: rg_{cat_id}_{size}_{lang}_{post_type})
+@wizard_router.callback_query(F.data.startswith("rg_"))
 async def regenerate_tags_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🔄 Yangi variant tuzilmoqda...")
-    data = await state.get_data()
+    parts = callback.data.split("_")
+    cat_id = parts[1] if len(parts) > 1 else "biznes"
+    size = parts[2] if len(parts) > 2 else "medium"
+    lang = parts[3] if len(parts) > 3 else "mix"
+    post_type = parts[4] if len(parts) > 4 else "reels"
 
-    # Agar data bo'sh bo'lsa ham foydalanuvchini to'xtatmay, xavfsiz default qiymatlardan foydalanamiz
-    category_id = data.get("category_id", "biznes")
-    custom_query = data.get("custom_query", "")
-    size = data.get("size", "medium")
-    lang = data.get("lang", "mix")
-    post_type = data.get("post_type", "reels")
-    variant_num = data.get("variant_num", 1) + 1
-    await state.update_data(variant_num=variant_num)
+    custom_query = get_user_custom_topic(callback.from_user.id) if cat_id == "custom" else ""
 
     res = generate_hashtags(
-        category_id=category_id,
+        category_id=cat_id,
         custom_query=custom_query,
         size=size,
         lang=lang,
@@ -256,8 +264,9 @@ async def regenerate_tags_callback(callback: CallbackQuery, state: FSMContext):
     type_labels = {"reels": "🎬 Reels", "post": "📸 Post / Karusel"}
 
     cat_title = html.escape(str(res['category_title']))
+    rand_badge = random.randint(10, 99)
 
-    result_text = f"""🔄 <b>Yangi variant #{variant_num} tayyorlandi!</b> 🚀
+    result_text = f"""🔄 <b>Yangi variant #{rand_badge} tayyorlandi!</b> 🚀
 
 📌 <b>Toifa:</b> {cat_title}
 📏 <b>Hajmi:</b> {res['count']} ta ({size_labels.get(size, size)})
@@ -273,6 +282,10 @@ Har bir videongizga bir xil teglarni takrorlayvermasdan, turli variantlardan foy
 👤 <b>Yaratuvchi:</b> {CREATOR_NAME}
 """
     try:
-        await callback.message.edit_text(result_text, reply_markup=get_result_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(
+            result_text,
+            reply_markup=get_result_keyboard(cat_id=cat_id, size=size, lang=lang, post_type=post_type),
+            parse_mode="HTML"
+        )
     except TelegramBadRequest:
         pass
